@@ -1,0 +1,1 @@
+const t="export_to_complex_excel";chrome.contextMenus.create({id:t,title:"Export to complex Excel",contexts:["page"]});chrome.contextMenus.onClicked.addListener((e,o)=>{e.menuItemId===t&&(console.log(e),chrome.tabs.sendMessage(o.id,{action:"ACTION_EXPORT"}))});

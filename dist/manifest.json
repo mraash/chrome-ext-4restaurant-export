@@ -1,0 +1,22 @@
+{
+    "manifest_version": 3,
+    "name": "4Restaurant warehouse request export",
+    "description": "Hihihi",
+    "author": "Ēriks Maršans",
+    "version": "1.0.0",
+    "permissions": [
+      "contextMenus"
+    ],
+    "background": {
+      "service_worker": "./background.js"
+    },
+    "content_scripts": [
+      {
+        "js": ["./content.js"],
+        "matches": [
+          "<all_urls>",
+          "file://*/*"
+        ]
+      }
+    ]
+}

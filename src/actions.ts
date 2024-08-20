@@ -1,1 +1,0 @@
-export const ACTION_EXPORT = 'export_to_excel_click';

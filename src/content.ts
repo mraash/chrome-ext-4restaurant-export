@@ -1,13 +1,13 @@
 import * as XLSX from 'xlsx';
-import { SheetData } from './excel/SheetData';
 
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+chrome.runtime.onMessage.addListener((message) => {
     if (message.action !== 'ACTION_EXPORT') {
         return;
     }
 
     const sheet = extractTextWithTableReplacement(document.body);
-    convertSheetDataToExcelFile(sheet);
+    const workbook = convertSheetDataToWorkbook(sheet);
+    saveSheetFile(workbook);
 });
 
 function extractTextWithTableReplacement(element: Element, result: any[] = []) {
@@ -62,12 +62,16 @@ function extractTextWithTableReplacement(element: Element, result: any[] = []) {
     return result;
 }
 
-function convertSheetDataToExcelFile(sheetData: Array<any>) {
+function convertSheetDataToWorkbook(sheetData: Array<any>): XLSX.WorkBook {
     const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
     const workbook = XLSX.utils.book_new();
 
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Default name');
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Report');
 
+    return workbook;
+}
+
+function saveSheetFile(workbook: XLSX.WorkBook): void {
     XLSX.writeFile(workbook, 'Report.xlsx');
 }
 
@@ -101,48 +105,68 @@ function convertTableObjectToSheetData(table: HTMLTableElement, startRow: number
         const dinner = Number(tableData[rowIndex].dinner);
         const total = Number(tableData[rowIndex].total);
 
-        const breakfestProcent = breakfest / total;
-        const lunckProcent = lunck / total;
-        const secondsLunchProcent = secondsLunch / total;
-        const dinnerProcent = dinner / total;
+        const { breakfestFormula, luncFormula, secondsLunchFormula, dinnerFormula } = createQuantityColumnFormulas(
+            currentRowIndex,
+            total,
+            breakfest,
+            lunck,
+            secondsLunch,
+            dinner,
+        );
 
         sheetData.push([
-            {
-                t: 's',
-                v: code,
-            },
+            { t: 's', v: code, },
             name,
             unit,
             notes,
-            {
-                t: 'n',
-                v: breakfest,
-                f: `ROUND(I${currentRowIndex} * ${breakfestProcent}, 3)`
-            },
-            {
-                t: 'n',
-                v: lunck,
-                f: `ROUND(I${currentRowIndex} * ${lunckProcent}, 3)`
-            },
-            {
-                t: 'n',
-                v: secondsLunch,
-                f: `ROUND(I${currentRowIndex} * ${secondsLunchProcent}, 3)`
-            },
-            {
-                t: 'n',
-                v: dinner,
-                f: `ROUND(I${currentRowIndex} * ${dinnerProcent}, 3)`
-            },
-            {
-                t: 'n',
-                v: total,
-            },
+            { t: 'n', v: breakfest, f: breakfestFormula },
+            { t: 'n', v: lunck, f: luncFormula },
+            { t: 'n', v: secondsLunch, f: secondsLunchFormula },
+            { t: 'n', v: dinner, f: dinnerFormula },
+            { t: 'n', v: total, },
         ]);
     }
 
     return sheetData;
 };
+
+function createQuantityColumnFormulas(
+    row: number,
+    totalQuantity: number,
+    breakfestQuantity: number,
+    lunckQuantity: number,
+    secondsLunchQuantity: number,
+    dinnerQuantity: number,
+) {
+    const breakfestProcent = breakfestQuantity / totalQuantity;
+    const lunckProcent = lunckQuantity / totalQuantity;
+    const secondsLunchProcent = secondsLunchQuantity / totalQuantity;
+    const dinnerProcent = dinnerQuantity / totalQuantity;
+
+    let breakfestFormula = `ROUND(I${row} * ${breakfestProcent}, 3)`;
+    let luncFormula = `ROUND(I${row} * ${lunckProcent}, 3)`;
+    let secondsLunchFormula = `ROUND(I${row} * ${secondsLunchProcent}, 3)`;
+    let dinnerFormula = `ROUND(I${row} * ${dinnerProcent}, 3)`;
+
+    let lastNotNull = '';
+
+    if (breakfestQuantity > 0)  lastNotNull = 'b';
+    if (lunckQuantity > 0)  lastNotNull = 'l';
+    if (secondsLunchQuantity > 0)  lastNotNull = 's';
+    if (dinnerQuantity > 0)  lastNotNull = 'd';
+
+    if (lastNotNull === 'b') breakfestFormula = `I${row} - F${row} - G${row} - H${row}`;
+    if (lastNotNull === 'l') luncFormula = `I${row} - E${row} - G${row} - H${row}`;
+    if (lastNotNull === 's') secondsLunchFormula = `I${row} - E${row} - F${row} - H${row}`;
+    if (lastNotNull === 'd') dinnerFormula = `I${row} - E${row} - F${row} - G${row}`;
+
+    return {
+        breakfestFormula,
+        luncFormula,
+        secondsLunchFormula,
+        dinnerFormula,
+    };
+}
 
 function convertHtmlTableToObject($table: HTMLElement) {
     const table = [];

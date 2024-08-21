@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 
 chrome.runtime.onMessage.addListener((message) => {
     if (message.action !== 'ACTION_EXPORT') {
@@ -6,18 +6,21 @@ chrome.runtime.onMessage.addListener((message) => {
     }
 
     const sheet = extractTextWithTableReplacement(document.body);
-    const workbook = convertSheetDataToWorkbook(sheet);
+    const styledSheet = setDefaultStylesToSheetData(sheet);
+    const workbook = convertSheetDataToWorkbook(styledSheet);
     saveSheetFile(workbook);
 });
 
-function extractTextWithTableReplacement(element: Element, result: any[] = []) {
+type SheetData = Array<Array<XLSX.CellObject>>;
+
+function extractTextWithTableReplacement(element: Element, result: any[] = []): SheetData {
     if (element.nodeType === Node.TEXT_NODE) {
         let trimmedText = element.textContent?.trim();
 
         if (trimmedText && trimmedText.length > 0) {
-            // if (trimmedText.match(/^Valdes priekšsēdētājs/)) {
-            //     trimmedText = trimmedText.replace('Valdes priekšsēdētājs', 'Noliktavas parzinis');
-            // }
+            if (trimmedText.match(/^Valdes priekšsēdētājs/)) {
+                trimmedText = trimmedText.replace('Valdes priekšsēdētājs', 'Noliktavas pārzinis');
+            }
 
             if (trimmedText.match(/^Nodokļu maksātāja/)) {
                 result.push([null]);
@@ -28,17 +31,24 @@ function extractTextWithTableReplacement(element: Element, result: any[] = []) {
             if (trimmedText.match(/^Pakalpojuma/)) {
                 result.push([null]);
             }
-            if (trimmedText.match(/^Apstiprināja/)) {
-                result.push([null]);
-            }
             if (trimmedText.match(/^Virtuves vadītāja/)) {
                 result.push([null]);
             }
-            if (trimmedText.match(/^Valdes priekšsēdētājs/)) {
+            if (trimmedText.match(/^Noliktavas pārzinis/)) {
                 result.push([null]);
             }
 
-            result.push([trimmedText]);
+            const cell: XLSX.CellObject = { t: 's', v: trimmedText };
+
+            if (trimmedText.match(/^Produktu pieprasījums/)) {
+                cell.s = {
+                    font: {
+                        bold: true,
+                    }
+                }
+            }
+
+            result.push([ cell ]);
         }
     }
     else if (element.nodeType === Node.ELEMENT_NODE) {
@@ -62,7 +72,49 @@ function extractTextWithTableReplacement(element: Element, result: any[] = []) {
     return result;
 }
 
-function convertSheetDataToWorkbook(sheetData: Array<any>): XLSX.WorkBook {
+function setDefaultStylesToSheetData(sheetData: SheetData): SheetData {
+    const MIN_ROWS = 50;
+    const MIN_COLUMNS = 25;
+
+    const borderStyle = {
+        style: 'thin',
+        color: {
+            rgb: 'FFFFFF',
+        },
+    }
+
+    for (let rowIndex = 0; rowIndex < sheetData.length || rowIndex < MIN_ROWS; rowIndex++) {
+        const isRowEmpty = !sheetData[rowIndex];
+
+        if (isRowEmpty) {
+            sheetData.push([]);
+        }
+
+        const row = sheetData[rowIndex];
+
+        for (let colIndex = 0; colIndex < row.length || colIndex < MIN_COLUMNS; colIndex++) {
+            const isCellEmpty = !row[colIndex];
+
+            if (isCellEmpty) {
+                sheetData[rowIndex][colIndex] = { t: 's', v: '' };
+            }
+
+            const cell = row[colIndex];
+            
+            cell.s = cell?.s ?? {};
+            cell.s.border = cell.s?.border ?? {};
+
+            cell.s.border.top = cell?.s?.border?.top ?? borderStyle;
+            cell.s.border.right = cell?.s?.border?.right ?? borderStyle;
+            cell.s.border.bottom = cell?.s?.border?.bottom ?? borderStyle;
+            cell.s.border.left = cell?.s?.border?.left ?? borderStyle;
+        }
+    }
+
+    return sheetData;
+}
+
+function convertSheetDataToWorkbook(sheetData: SheetData): XLSX.WorkBook {
     const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
     const workbook = XLSX.utils.book_new();
 
@@ -78,19 +130,21 @@ function saveSheetFile(workbook: XLSX.WorkBook): void {
 function convertTableObjectToSheetData(table: HTMLTableElement, startRow: number) {
     const tableData = convertHtmlTableToObject(table);
 
-    const sheetData: Array<Array<XLSX.CellObject | string | number>> = [
-        [
-            'Kods',
-            'Nosaukums',
-            'Mērvienība',
-            'Piezīmes',
-            '1. Brokastis',
-            '2. Pusdienas',
-            '3. Launags',
-            '4. Vakariņas',
-            'Kopā',
-        ],
-    ];
+    const sheetData: SheetData = [];
+
+    const header = [
+        'Kods',
+        'Nosaukums',
+        'Mērvienība',
+        'Piezīmes',
+        '1. Brokastis',
+        '2. Pusdienas',
+        '3. Launags',
+        '4. Vakariņas',
+        'Kopā',
+    ].map((value) => ({ t: 's' as XLSX.ExcelDataType, v: value, s: { font: { bold: true, textAlign: 'center'} } }));
+
+    sheetData.push(header);
 
     for (let rowIndex = 0; rowIndex < tableData.length; rowIndex++) {
         const currentRowIndex = rowIndex + 2 + startRow;
@@ -115,17 +169,65 @@ function convertTableObjectToSheetData(table: HTMLTableElement, startRow: number
         );
 
         sheetData.push([
-            { t: 's', v: code, },
-            name,
-            unit,
-            notes,
+            { t: 's', v: code },
+            { t: 's', v: name },
+            { t: 's', v: unit },
+            { t: 's', v: notes },
             { t: 'n', v: breakfest, f: breakfestFormula },
             { t: 'n', v: lunck, f: luncFormula },
             { t: 'n', v: secondsLunch, f: secondsLunchFormula },
             { t: 'n', v: dinner, f: dinnerFormula },
-            { t: 'n', v: total, },
+            { t: 'n', v: total },
         ]);
     }
+
+    const borderStyle = {
+        style: 'thin',
+        color: {
+            rgb: '000000',
+        },
+    };
+
+    const s = {
+        border: {
+            top: borderStyle,
+            right: borderStyle,
+            bottom: borderStyle,
+            left: borderStyle,
+        }
+    };
+
+    sheetData.forEach((row) => {
+        row.forEach((cell) => {
+            if (!cell.s) {
+                cell.s = {};
+            }
+
+            cell.s.border = s.border;
+        });
+
+        row.push({
+            t: 's',
+            v: '',
+            s: {
+                border: {
+                    left: borderStyle,
+                }
+            }
+        });
+    });
+
+    sheetData.push([
+        { t: 's', v: '', s: { border: { top: borderStyle } } },
+        { t: 's', v: '', s: { border: { top: borderStyle } } },
+        { t: 's', v: '', s: { border: { top: borderStyle } } },
+        { t: 's', v: '', s: { border: { top: borderStyle } } },
+        { t: 's', v: '', s: { border: { top: borderStyle } } },
+        { t: 's', v: '', s: { border: { top: borderStyle } } },
+        { t: 's', v: '', s: { border: { top: borderStyle } } },
+        { t: 's', v: '', s: { border: { top: borderStyle } } },
+        { t: 's', v: '', s: { border: { top: borderStyle } } },
+    ]);
 
     return sheetData;
 };

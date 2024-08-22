@@ -73,8 +73,8 @@ function extractTextWithTableReplacement(element: Element, result: any[] = []): 
 }
 
 function setDefaultStylesToSheetData(sheetData: SheetData): SheetData {
-    const MIN_ROWS = 50;
-    const MIN_COLUMNS = 25;
+    const MIN_ROWS = 100;
+    const MIN_COLUMNS = 50;
 
     const borderStyle = {
         style: 'thin',
@@ -103,11 +103,14 @@ function setDefaultStylesToSheetData(sheetData: SheetData): SheetData {
             
             cell.s = cell?.s ?? {};
             cell.s.border = cell.s?.border ?? {};
+            cell.s.font = cell.s?.font ?? {};
 
-            cell.s.border.top = cell?.s?.border?.top ?? borderStyle;
-            cell.s.border.right = cell?.s?.border?.right ?? borderStyle;
-            cell.s.border.bottom = cell?.s?.border?.bottom ?? borderStyle;
-            cell.s.border.left = cell?.s?.border?.left ?? borderStyle;
+            cell.s.border.top = cell.s.border?.top ?? borderStyle;
+            cell.s.border.right = cell.s.border?.right ?? borderStyle;
+            cell.s.border.bottom = cell.s.border?.bottom ?? borderStyle;
+            cell.s.border.left = cell.s.border?.left ?? borderStyle;
+
+            cell.s.font.name = cell.s.font?.name ?? 'Times New Roman';
         }
     }
 
@@ -124,7 +127,7 @@ function convertSheetDataToWorkbook(sheetData: SheetData): XLSX.WorkBook {
 }
 
 function saveSheetFile(workbook: XLSX.WorkBook): void {
-    XLSX.writeFile(workbook, 'Report.xlsx');
+    XLSX.writeFile(workbook, 'Report.xlsx', { sheetStubs: true });
 }
 
 function convertTableObjectToSheetData(table: HTMLTableElement, startRow: number) {

@@ -6,7 +6,6 @@ chrome.contextMenus.create({
 
 chrome.contextMenus.onClicked.addListener((info, tab) => {
     if (info.menuItemId === 'export_to_complex_excel') {
-        console.log(info);
         chrome.tabs.sendMessage(tab!.id!, { action: 'ACTION_EXPORT' });
     }
 });

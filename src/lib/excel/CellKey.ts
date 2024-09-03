@@ -44,11 +44,15 @@ export class CellKey {
     }
 
     public static numberToColumn(n: number): string {
-        if (n <= 0) {
-            return '';
+        let columnName = '';
+
+        while (n > 0) {
+            let remainder = (n - 1) % 26;
+            columnName = String.fromCharCode(65 + remainder) + columnName;
+            n = Math.floor((n - 1) / 26);
         }
 
-        return this.numberToColumn(Math.floor(n / 26)) + String.fromCharCode(65 + (n % 26));
+        return columnName;
     }
 
     public static columnToNumber(column: string): number {

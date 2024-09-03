@@ -1,4 +1,3 @@
-import { CellKey } from './CellKey';
 import { CellKeyType, CellValueType } from './types/excel';
 
 export class SheetData {

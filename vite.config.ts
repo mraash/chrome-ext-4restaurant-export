@@ -11,10 +11,11 @@ export default defineConfig({
         entryFileNames: '[name].js',
       },
     },
+    sourcemap: true,
   },
   resolve: {
     alias: {
       '~root': 'src/',
     }
-  }
+  },
 });

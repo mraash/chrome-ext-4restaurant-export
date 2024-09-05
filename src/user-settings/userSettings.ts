@@ -1,7 +1,7 @@
 export const userSettings = {
-    fileName: 'Norakstit',
+    fileName: 'Report',
     fileExtension: 'xlsx',
-    sheetName: 'Test',
+    sheetName: 'Report',
     font: 'Times New Roman',
     ignoreEmptyTable: true,
     replaceStrings: [

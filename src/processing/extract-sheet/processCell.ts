@@ -15,7 +15,12 @@ const getValue = (value: string): string | number => {
             mutatedValue = mutatedValue.replace(',', '.')
         }
 
-        mutatedValue = Number(mutatedValue);
+        // Todo: The logic associated with processing lines that consist entirely of 0 should be moved to userSettings
+        const isNullString = mutatedValue.match(/^0+$/);
+
+        if (!isNullString) {
+            mutatedValue = Number(mutatedValue);
+        }
     }
 
     return mutatedValue;

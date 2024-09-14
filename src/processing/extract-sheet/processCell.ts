@@ -16,11 +16,15 @@ const getValue = (value: string): string | number => {
         }
 
         // Todo: The logic associated with processing lines that consist entirely of 0 should be moved to userSettings
-        const isNullString = mutatedValue.match(/^0+$/);
+        const isNullString = mutatedValue.match(/^0{2,}$/);
 
         if (!isNullString) {
             mutatedValue = Number(mutatedValue);
         }
+    }
+
+    if (mutatedValue === '0') {
+        console.log(mutatedValue);
     }
 
     return mutatedValue;
